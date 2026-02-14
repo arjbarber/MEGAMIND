@@ -13,7 +13,7 @@ def home():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-@app.route('/create/user', methods=['POST'])
+@app.route('/create-user', methods=['POST'])
 def create_user():
     data = request.get_json()
     if not data:
