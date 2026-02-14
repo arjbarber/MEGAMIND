@@ -1,9 +1,12 @@
 from flask import Flask, jsonify, request
+from flask_socketio import SocketIO, emit
 import boto3
+import cv2
+import numpy as np
+import base64
 
 app = Flask(__name__)
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('YourTableName')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def home():
@@ -85,6 +88,36 @@ def reset_streak():
         return jsonify({"message": "Streak reset", "new_streak": response['Attributes']['streak']}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@socketio.on('process_frame')
+def handle_frame(data):
+    """
+    Expects a dictionary with a base64 encoded image string from the frontend.
+    """
+    try:
+        image_data = data.get('image')
+        user_id = data.get('user_id')
+
+        if not image_data:
+            return
+
+        header, encoded = image_data.split(",", 1)
+        decoded = base64.b64decode(encoded)
+        np_arr = np.frombuffer(decoded, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        _, buffer = cv2.imencode('.jpg', gray)
+        processed_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        emit('frame_result', {
+            'image': f"data:image/jpeg;base64,{processed_base64}",
+            'status': 'success',
+        })
+        
+    except Exception as e:
+        emit('cv_error', {'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5050)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5050)
