@@ -40,11 +40,14 @@ def create_user():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route('/increase-streak', methods=['GET'])
+@app.route('/increase-streak', methods=['POST'])
 def increase_streak():
-    user_id = request.args.get('user-id')
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    user_id = data.get('user-id')
     if not user_id:
-        return jsonify({"error": "Missing user-id parameter"}), 400
+        return jsonify({"error": "Missing user_id"}), 400
 
     table = get_table()
     try:
