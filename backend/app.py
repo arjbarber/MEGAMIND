@@ -9,12 +9,17 @@ table = dynamodb.Table('YourTableName')
 def home():
     return jsonify({"message": "Welcome to the backend"})
 
+def get_table():
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    return dynamodb.Table('users')
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
 @app.route('/create-user', methods=['POST'])
 def create_user():
+    
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -25,7 +30,12 @@ def create_user():
     
     table = dynamodb.Table('users')
     try:
-        table.put_item(Item={'user-id': user_id, 'streak': 0})
+        table = get_table()
+        table.put_item(Item={
+            'user-id': user_id,
+            'streak': 0,
+            'performance': 0
+        })
         return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
