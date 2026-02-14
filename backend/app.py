@@ -28,7 +28,10 @@ def create_user():
     if not user_id:
         return jsonify({"error": "Missing user_id"}), 400
     
-    table = dynamodb.Table('users')
+    table = get_table()
+    response = table.get_item(Key={'user-id': user_id})
+    if 'Item' in response:
+        return jsonify({"error": "User already exists"}), 400
     try:
         table = get_table()
         table.put_item(Item={
@@ -58,6 +61,28 @@ def increase_streak():
             ReturnValues="UPDATED_NEW"
         )
         return jsonify({"message": "Streak increased", "new_streak": response['Attributes']['streak']}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route('/reset-streak', methods=['POST'])
+def reset_streak():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    user_id = data.get('user-id')
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    table = get_table()
+    try:
+        response = table.update_item(
+            Key={'user-id': user_id},
+            UpdateExpression="SET streak = :val",
+            ExpressionAttributeValues={':val': 0},
+            ReturnValues="UPDATED_NEW"
+        )
+        return jsonify({"message": "Streak reset", "new_streak": response['Attributes']['streak']}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
