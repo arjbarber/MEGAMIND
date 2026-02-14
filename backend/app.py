@@ -39,7 +39,24 @@ def create_user():
         return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/increase-streak', methods=['GET'])
+def increase_streak():
+    user_id = request.args.get('user-id')
+    if not user_id:
+        return jsonify({"error": "Missing user-id parameter"}), 400
 
+    table = get_table()
+    try:
+        response = table.update_item(
+            Key={'user-id': user_id},
+            UpdateExpression="ADD streak :val",
+            ExpressionAttributeValues={':val': 1},
+            ReturnValues="UPDATED_NEW"
+        )
+        return jsonify({"message": "Streak increased", "new_streak": response['Attributes']['streak']}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5050)
