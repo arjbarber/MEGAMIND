@@ -43,12 +43,7 @@ export default function Parietal() {
       const status = data.status;
 
       // Deduplication Logic
-      // If we are given a shape we've already finished, skip it.
       if (completedShapesRef.current.includes(shapeName) && status !== 'completed') {
-          // Only log/reset occasionally to avoid spamming resets if the backend is slow
-          // But here we rely on the backend picking a new one.
-          // To prevent loop spam, we could throttle this, but 10fps is slow enough.
-          // However, we want to stop drawing this shape immediately.
           socket.emit("reset_game", { user_id: "anonymous" });
           setMessage(`Skipping ${shapeName} (already done)...`);
           return;
@@ -72,7 +67,6 @@ export default function Parietal() {
           }
         }
       } else if (!isTaskComplete) {
-         // If we are playing a valid new shape
          if (!completedShapesRef.current.includes(shapeName)) {
              setMessage(`Draw a ${shapeName} (${completedShapesRef.current.length}/3)`);
          }
@@ -108,7 +102,9 @@ export default function Parietal() {
     const interval = setInterval(() => {
       if (!socket || !videoRef.current || !canvasRef.current || isTaskComplete) return;
       
-      // We only send frames if we haven't finished 3 shapes
+      // FIX 1: Ensure the video is actually playing and has data before capturing
+      if (videoRef.current.readyState !== 4) return;
+      
       if (completedShapesRef.current.length >= 3) return;
 
       const context = canvasRef.current.getContext("2d");
@@ -156,13 +152,14 @@ export default function Parietal() {
           </p>
           
           <div style={{ position: "relative", width: "640px", height: "480px", background: "#111", borderRadius: "12px", overflow: "hidden", border: "2px solid #333" }}>
-            {/* Hidden video element for raw capture */}
+            
+            {/* FIX 2: Replaced display: "none" with position absolute and opacity 0 */}
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              style={{ display: "none" }}
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
               width="640"
               height="480"
             />
