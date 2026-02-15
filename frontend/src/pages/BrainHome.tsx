@@ -1,15 +1,36 @@
+
+
+
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 
-const CAROLINA_BLUE = "#7BAFD4";
+/* ========================= */
+/* 🎨 Region Colors         */
+/* ========================= */
 
-/* 🧠 Brain Model – Safe + Visible */
-function BrainModel({ activePart, completedTasks }: { activePart: string | null, completedTasks: string[] }) {
+const COLORS: Record<string, string> = {
+  prefrontal: "#00b7cb",
+  temporal: "#04f665",
+  occipital: "#FF3C38",
+  parietal: "#fffb12",
+  cerebellum: "#FF8A00",
+};
+
+/* ========================= */
+/* 🧠 Brain Model           */
+/* ========================= */
+
+function BrainModel({
+  activePart,
+  completedTasks,
+}: {
+  activePart: string | null;
+  completedTasks: string[];
+}) {
   const { scene } = useGLTF("/models/brain.glb");
-
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
   useEffect(() => {
@@ -20,34 +41,29 @@ function BrainModel({ activePart, completedTasks }: { activePart: string | null,
         if (mesh.material instanceof THREE.MeshStandardMaterial) {
           mesh.material = mesh.material.clone();
 
-          // Keep base brain visible and natural
           mesh.material.roughness = 0.6;
           mesh.material.metalness = 0.1;
 
           const name = mesh.name.toLowerCase();
 
-          const isCompleted =
-            (completedTasks.includes("prefrontal") && name.includes("frontal")) ||
-            (completedTasks.includes("temporal") && name.includes("temporal")) ||
-            (completedTasks.includes("occipital") && name.includes("occipital")) ||
-            (completedTasks.includes("cerebellum") && name.includes("cerebellum")) ||
-            (completedTasks.includes("parietal") && name.includes("parietal"));
+          const region = Object.keys(COLORS).find((key) =>
+            key === "prefrontal"
+              ? name.includes("frontal")
+              : name.includes(key)
+          );
 
-          const isHovered =
-            (activePart === "prefrontal" && name.includes("frontal")) ||
-            (activePart === "temporal" && name.includes("temporal")) ||
-            (activePart === "occipital" && name.includes("occipital")) ||
-            (activePart === "cerebellum" && name.includes("cerebellum")) ||
-            (activePart === "parietal" && name.includes("parietal"));
+          if (!region) return;
+
+          const isHovered = activePart === region;
+          const isCompleted = completedTasks.includes(region);
 
           if (isHovered) {
-            mesh.material.emissive = new THREE.Color(CAROLINA_BLUE);
-            mesh.material.emissiveIntensity = 2.2;
+            mesh.material.emissive = new THREE.Color(COLORS[region]);
+            mesh.material.emissiveIntensity = 2.5;
           } else if (isCompleted) {
-            mesh.material.emissive = new THREE.Color(CAROLINA_BLUE);
-            mesh.material.emissiveIntensity = 0.8;
+            mesh.material.emissive = new THREE.Color(COLORS[region]);
+            mesh.material.emissiveIntensity = 1;
           } else {
-            // DO NOT darken base material
             mesh.material.emissive = new THREE.Color("#000000");
             mesh.material.emissiveIntensity = 0;
           }
@@ -59,124 +75,175 @@ function BrainModel({ activePart, completedTasks }: { activePart: string | null,
   return <primitive object={clonedScene} scale={3.8} />;
 }
 
+/* ========================= */
+/* 🧠 BrainHome             */
+/* ========================= */
 
 export default function BrainHome() {
   const navigate = useNavigate();
+
   const [activePart, setActivePart] = useState<string | null>(null);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [streak, setStreak] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+
   const userId = localStorage.getItem("user_id");
 
   useEffect(() => {
-    if (userId) {
-      fetch("http://34.236.152.229/get-user-stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ "user-id": userId }),
+    if (!userId) return;
+
+    fetch("http://34.236.152.229/get-user-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "user-id": userId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setStreak(data.streak ?? null);
+        setUserEmail(data.email ?? null);
+        setCompletedTasks(data.completed_tasks || []);
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.streak !== undefined) {
-            setStreak(data.streak);
-            setUserEmail(data.email);
-            setCompletedTasks(data.completed_tasks || []);
-          }
-        })
-        .catch((err) => console.error("Error fetching stats:", err));
-    }
+      .catch(console.error);
   }, [userId]);
 
   const handleLogout = () => {
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("access_token");
-    setStreak(null);
-    setUserEmail(null);
+    localStorage.clear();
     setCompletedTasks([]);
     navigate("/");
   };
 
   return (
     <div style={containerStyle}>
-      {/* LEFT: 3D Workspace */}
+      {/* LEFT */}
       <div style={{ width: "70%", height: "100%", background: "#000" }}>
         <Canvas camera={{ position: [0, 2, 9], fov: 40 }}>
-          
-          {/* Balanced Lighting for Depth */}
           <ambientLight intensity={0.8} />
           <directionalLight position={[10, 0, 50]} intensity={1.2} />
           <directionalLight position={[10, -5, 10]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <BrainModel activePart={activePart} completedTasks={completedTasks} />
+            <BrainModel
+              activePart={activePart}
+              completedTasks={completedTasks}
+            />
           </Suspense>
 
-          <OrbitControls
-            enablePan={false}
-            maxDistance={15}
-            minDistance={6}
-          />
+          <OrbitControls enablePan={false} maxDistance={15} minDistance={6} />
         </Canvas>
       </div>
 
-      {/* RIGHT: Urban Noir Legend (UNCHANGED UI) */}
+      {/* RIGHT PANEL */}
       <div style={legendStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2 style={titleStyle}>MEGAMIND!</h2>
           {userId ? (
-            <button onClick={handleLogout} style={logoutButtonStyle}>LOGOUT</button>
+            <button onClick={handleLogout} style={logoutButtonStyle}>
+              LOGOUT
+            </button>
           ) : (
-            <button onClick={() => navigate("/auth")} style={authButtonStyle}>SIGN IN</button>
+            <button onClick={() => navigate("/auth")} style={authButtonStyle}>
+              SIGN IN
+            </button>
           )}
         </div>
-        
+
         {userId && userEmail && (
           <div style={statsContainerStyle}>
-            <p style={{ color: CAROLINA_BLUE, margin: 0 }}>SUBJECT: {userEmail.toUpperCase()}</p>
-            <p style={{ color: "#FFF", fontSize: "1.2rem", margin: "0.5rem 0" }}>🔥 STREAK: {streak} DAYS</p>
-            <p style={{ color: "#556", fontSize: "0.8rem" }}>TASKS COMPLETED: {completedTasks.length} / 5</p>
+            <p style={{ color: "#00E5FF", margin: 0 }}>
+              SUBJECT: {userEmail.toUpperCase()}
+            </p>
+            <p style={{ color: "#FFF", margin: "0.5rem 0" }}>
+              🔥 STREAK: {streak}
+            </p>
+            <p style={{ color: "#556" }}>
+              TASKS COMPLETED: {completedTasks.length} / 5
+            </p>
           </div>
         )}
 
-        <p style={{ color: '#556', marginBottom: '2rem', fontStyle: 'italic' }}>
-          {userId ? "Welcome back. Continue your training." : "Sign in to track your progress and streaks!"}
-        </p>
+        {Object.keys(COLORS).map((part) => {
+          const isActive = activePart === part;
+          const isDone = completedTasks.includes(part);
 
-        {["Prefrontal", "Temporal", "Occipital", "Cerebellum", "Parietal"].map((part) => (
-          <button 
-            key={part}
-            onMouseEnter={() => setActivePart(part.toLowerCase())}
-            onMouseLeave={() => setActivePart(null)}
-            onClick={() => navigate(`/${part.toLowerCase()}`)} 
-            style={{
-              ...buttonStyle,
-              borderColor: activePart === part.toLowerCase() ? CAROLINA_BLUE : 
-                           completedTasks.includes(part.toLowerCase()) ? "rgba(123, 175, 212, 0.4)" : "#1a1a1c",
-              color: activePart === part.toLowerCase() ? CAROLINA_BLUE : 
-                     completedTasks.includes(part.toLowerCase()) ? CAROLINA_BLUE : "#889"
-            }}
-          >
-            {part.toUpperCase()} {completedTasks.includes(part.toLowerCase()) && "✔"}
-          </button>
-        ))}
-        
+          return (
+            <button
+              key={part}
+              onMouseEnter={() => setActivePart(part)}
+              onMouseLeave={() => setActivePart(null)}
+              onClick={() => navigate(`/${part}`)}
+              style={{
+                ...buttonStyle,
+                borderColor: isActive
+                  ? COLORS[part]
+                  : isDone
+                  ? COLORS[part]
+                  : "#1a1a1c",
+                color: isActive
+                  ? COLORS[part]
+                  : isDone
+                  ? COLORS[part]
+                  : "#889",
+              }}
+            >
+              {part.toUpperCase()} {isDone && "✔"}
+            </button>
+          );
+        })}
+
         <div style={footerStyle}>
-          <p>EST. 2026 | SECTOR: {activePart ? activePart.toUpperCase() : "STANDBY"}</p>
-          <p>COORDINATION STATUS: {completedTasks.length === 5 ? "MAXIMAL" : "NOMINAL"}</p>
+          <p>
+            SECTOR: {activePart ? activePart.toUpperCase() : "STANDBY"}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-const authButtonStyle: React.CSSProperties = {
+/* ========================= */
+/* 🎭 Styles                 */
+/* ========================= */
+
+const containerStyle: React.CSSProperties = {
+  display: "flex",
+  height: "100vh",
+  width: "100vw",
+  background: "#000",
+};
+
+const legendStyle: React.CSSProperties = {
+  width: "30%",
+  background: "#050507",
+  borderLeft: "2px solid rgba(255,255,255,0.05)",
+  padding: "4rem 2rem",
+  fontFamily: '"Courier New", monospace',
+  display: "flex",
+  flexDirection: "column",
+  gap: "1.5rem",
+};
+
+const titleStyle = {
+  color: "#00E5FF",
+  fontSize: "2.4rem",
+  letterSpacing: "8px",
+  margin: 0,
+};
+
+const buttonStyle: React.CSSProperties = {
+  padding: "1.4rem",
+  width: "100%",
   background: "transparent",
-  border: `1px solid ${CAROLINA_BLUE}`,
-  color: CAROLINA_BLUE,
-  padding: "0.5rem 1rem",
+  border: "1px solid #1a1a1c",
   cursor: "pointer",
-  fontSize: "0.8rem",
-  letterSpacing: "2px",
+  textAlign: "left",
+  letterSpacing: "3px",
+  transition: "all 0.2s ease",
+};
+
+const statsContainerStyle: React.CSSProperties = {
+  border: "1px solid #1a1a1c",
+  padding: "1rem",
+  background: "rgba(255,255,255,0.03)",
 };
 
 const logoutButtonStyle: React.CSSProperties = {
@@ -185,64 +252,20 @@ const logoutButtonStyle: React.CSSProperties = {
   color: "#666",
   padding: "0.5rem 1rem",
   cursor: "pointer",
-  fontSize: "0.8rem",
-  letterSpacing: "2px",
 };
 
-const statsContainerStyle: React.CSSProperties = {
-  border: "1px solid #1a1a1c",
-  padding: "1rem",
-  marginTop: "1rem",
-  background: "rgba(123, 175, 212, 0.05)",
-};
-
-/* --- Urban Noir Aesthetics (UNCHANGED) --- */
-const containerStyle: React.CSSProperties = { 
-  display: "flex", 
-  height: "100vh", 
-  width: "100vw", 
-  background: "#000",
-  overflow: "hidden" 
-};
-
-const legendStyle: React.CSSProperties = {
-  width: "30%",
-  background: "#050507",
-  borderLeft: `2px solid rgba(123, 175, 212, 0.1)`,
-  padding: "4rem 2rem",
-  fontFamily: '"Courier New", Courier, monospace',
-  display: "flex",
-  flexDirection: "column",
-  gap: "1.5rem"
-};
-
-const titleStyle = { 
-  color: CAROLINA_BLUE, 
-  fontSize: "2.4rem", 
-  letterSpacing: "8px", 
-  margin: "0",
-  textShadow: `0 0 10px rgba(123, 175, 212, 0.3)`
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "1.4rem",
-  width: "100%",
-  fontSize: "1.2rem",
+const authButtonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid #1a1a1c",
-  borderRadius: "2px",
+  border: "1px solid #00E5FF",
+  color: "#00E5FF",
+  padding: "0.5rem 1rem",
   cursor: "pointer",
-  textAlign: "left",
-  transition: "all 0.2s ease",
-  letterSpacing: "3px"
 };
 
 const footerStyle: React.CSSProperties = {
   marginTop: "auto",
   fontSize: "0.9rem",
   color: "#334",
-  letterSpacing: "2px",
   borderTop: "1px solid #111",
   paddingTop: "1.5rem",
-  lineHeight: "1.8"
 };
