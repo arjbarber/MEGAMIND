@@ -23,7 +23,7 @@ export default function Auth() {
       : { email, password, birthdate, name };
 
     try {
-      const response = await fetch(`https://decadally-unvivacious-cristian.ngrok-free.dev${endpoint}`, {
+      const response = await fetch(`https://megamindapi.andrewbarber.dev${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -52,7 +52,7 @@ export default function Auth() {
     e.preventDefault();
     setError("");
     try {
-      const response = await fetch(`https://decadally-unvivacious-cristian.ngrok-free.dev/verify`, {
+      const response = await fetch(`https://megamindapi.andrewbarber.dev/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code: verificationCode }),
