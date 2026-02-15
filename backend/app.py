@@ -10,9 +10,11 @@ import random
 import botocore.exceptions 
 import os
 from dotenv import load_dotenv
+from flask_cors import CORS
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 mp_hands = mp.solutions.hands
