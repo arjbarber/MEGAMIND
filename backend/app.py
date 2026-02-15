@@ -403,7 +403,7 @@ def handle_frame(data):
                 active_color = COLORS[current_node_idx % len(COLORS)]
                 cv2.line(img, current_shape[current_node_idx-1], finger_pos, active_color, 2)
 
-            for i in range(current_node_idx, len(current_shape)):
+            for i in range(len(current_shape) - 1, current_node_idx - 1, -1):
                 node = current_shape[i]
                 color = COLORS[i % len(COLORS)] if i == current_node_idx else (200, 200, 200)
                 cv2.circle(img, node, 15, color, cv2.FILLED)
