@@ -200,7 +200,7 @@ export default function BrainHome() {
 /* ========================= */
 const containerStyle: React.CSSProperties = { display: "flex", height: "100vh", width: "100vw", background: "#000", overflow: "hidden" };
 const legendStyle: React.CSSProperties = { width: "30%", background: "#050507", borderLeft: "2px solid rgba(255,255,255,0.05)", padding: "4rem 2rem", fontFamily: '"Courier New", monospace', display: "flex", flexDirection: "column", gap: "1.2rem" };
-const titleStyle = { color: "#00E5FF", fontSize: "2.2rem", letterSpacing: "6px", margin: 0 };
+const titleStyle = { color: "#00E5FF", fontSize: "4.0rem", letterSpacing: "6px", margin: 0 };
 const buttonStyle: React.CSSProperties = { padding: "1.2rem", width: "100%", background: "transparent", border: "1px solid #1a1a1c", cursor: "pointer", textAlign: "left", letterSpacing: "3px", transition: "all 0.3s ease", borderRadius: '4px' };
 const statsContainerStyle: React.CSSProperties = { border: "1px solid #1a1a1c", padding: "1rem", background: "rgba(0, 229, 255, 0.05)", borderRadius: '4px' };
 const logoutButtonStyle: React.CSSProperties = { background: "transparent", border: "1px solid #444", color: "#666", padding: "0.4rem 0.8rem", cursor: "pointer", fontSize: '0.7rem' };
