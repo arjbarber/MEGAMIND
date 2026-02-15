@@ -158,9 +158,9 @@ def verify_user():
 
 @app.route('/login', methods=['POST'])
 def login_user():
-    print("=== LOGIN ROUTE HIT ===")
+    print("=== LOGIN ROUTE HIT ===", flush=True)
     data = request.get_json()
-    print(f"Data received: {data}")
+    print(f"Data received: {data}", flush=True)
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
     
@@ -171,7 +171,7 @@ def login_user():
         return jsonify({"error": "Missing email or password"}), 400
 
     try:
-        print("=== CHECKING DATABASE ===")
+        print("=== CHECKING DATABASE ===", flush=True)
         response = cognito_client.initiate_auth(
             ClientId=COGNITO_CLIENT_ID,
             AuthFlow='USER_PASSWORD_AUTH',
@@ -180,7 +180,7 @@ def login_user():
                 'PASSWORD': password
             }
         )
-        print("=== DATABASE CHECK COMPLETE ===")
+        print("=== DATABASE CHECK COMPLETE ===", flush=True)
         
         # FIX 1: Safely handle Cognito "Challenges" (like forcing a password reset)
         if 'ChallengeName' in response:
