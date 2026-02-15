@@ -228,6 +228,30 @@ def login_user():
     except Exception as e:
         return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
+@app.route('/reset-user', methods=['POST'])
+def reset_user():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    user_id = data.get('user-id')
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    table = get_table()
+    try:
+        table.update_item(
+            Key={'user-id': user_id},
+            UpdateExpression="SET streak = :s, last_streak_date = :d, completed_tasks = :c",
+            ExpressionAttributeValues={
+                ':s': 0,
+                ':d': '',
+                ':c': []
+            }
+        )
+        return jsonify({"message": "User stats reset successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/get-user-stats', methods=['POST'])
 def get_user_stats():
     data = request.get_json()
