@@ -207,7 +207,7 @@ export default function Parietal() {
       ) : (
         <>
           <h2 style={{ fontSize: "2rem", marginBottom: "1rem" }}>
-            Parietal Lobe Activated ✨
+            Parietal Lobe Activated
           </h2>
           <div style={{ marginBottom: "2rem" }}>
             <p style={{ fontSize: "1.2rem" }}>Completed Shapes:</p>
