@@ -84,6 +84,7 @@ def register_user():
     try:
         cognito_response = cognito_client.sign_up(
             ClientId=COGNITO_CLIENT_ID,
+            Username=email,
             Password=password,
             UserAttributes=[
                 {'Name': 'email', 'Value': email},
