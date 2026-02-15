@@ -77,6 +77,7 @@ def register_user():
     password = data.get('password')
     email = data.get('email')
     birthdate = data.get('birthdate') ## YYYY-MM-DD
+    name = data.get('name', email.split('@')[0] if email else "User")
     
     if not all([password, email, birthdate]):
         return jsonify({"error": "Missing required fields. Please provide password, email, and birthdate."}), 400
@@ -88,7 +89,8 @@ def register_user():
             Password=password,
             UserAttributes=[
                 {'Name': 'email', 'Value': email},
-                {'Name': 'birthdate', 'Value': birthdate}
+                {'Name': 'birthdate', 'Value': birthdate},
+                {'Name': 'name', 'Value': name}
             ]
         )
         
@@ -98,6 +100,7 @@ def register_user():
         table.put_item(Item={
             'user-id': cognito_user_id,
             'email': email,
+            'name': name,
             'streak': 0,
             'performance': 0
         })
