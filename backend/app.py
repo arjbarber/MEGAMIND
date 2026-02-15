@@ -189,7 +189,6 @@ def handle_frame(data):
             cv2.line(img, current_shape[-1], current_shape[0], final_color, 4)
             
             shape_name = user_game_state[user_id]['shape_name'].upper()
-            cv2.putText(img, f"YOU DREW A {shape_name}!", (50, h//2), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
 
         _, buffer = cv2.imencode('.jpg', img)
         processed_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -197,7 +196,8 @@ def handle_frame(data):
         emit('frame_result', {
             'image': f"data:image/jpeg;base64,{processed_base64}",
             'status': 'completed' if game_completed else 'playing',
-            'progress': current_node_idx
+            'progress': current_node_idx,
+            'message': f"You drew a {shape_name}!" if game_completed else "" 
         })
         
     except Exception as e:
