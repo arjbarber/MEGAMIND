@@ -174,6 +174,8 @@ def handle_frame(data):
             color = COLORS[(i-1) % len(COLORS)]
             cv2.line(img, current_shape[i-1], current_shape[i], color, 4)
 
+        shape_name = user_game_state[user_id]['shape_name']
+
         if not game_completed:
             if current_node_idx > 0 and finger_pos:
                 active_color = COLORS[current_node_idx % len(COLORS)]
@@ -187,8 +189,6 @@ def handle_frame(data):
         else:
             final_color = COLORS[-1 % len(COLORS)]
             cv2.line(img, current_shape[-1], current_shape[0], final_color, 4)
-            
-            shape_name = user_game_state[user_id]['shape_name'].upper()
 
         _, buffer = cv2.imencode('.jpg', img)
         processed_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -197,7 +197,8 @@ def handle_frame(data):
             'image': f"data:image/jpeg;base64,{processed_base64}",
             'status': 'completed' if game_completed else 'playing',
             'progress': current_node_idx,
-            'message': f"You drew a {shape_name}!" if game_completed else "" 
+            'shape_name': shape_name,
+            'message': f"You drew a {shape_name.upper()}!" if game_completed else "" 
         })
         
     except Exception as e:

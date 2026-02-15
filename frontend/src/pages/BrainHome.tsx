@@ -30,7 +30,8 @@ function BrainModel({ activePart }: { activePart: string | null }) {
             (activePart === "prefrontal" && name.includes("frontal")) ||
             (activePart === "temporal" && name.includes("temporal")) ||
             (activePart === "occipital" && name.includes("occipital")) ||
-            (activePart === "cerebellum" && name.includes("cerebellum"));
+            (activePart === "cerebellum" && name.includes("cerebellum")) ||
+            (activePart === "parietal" && name.includes("parietal"));
 
           if (matches) {
             mesh.material.emissive = new THREE.Color(CAROLINA_BLUE);
@@ -83,7 +84,7 @@ export default function BrainHome() {
           Finish all 5 tests to unlock your colored brain!
         </p>
 
-        {["Prefrontal", "Temporal", "Occipital", "Cerebellum"].map((part) => (
+        {["Prefrontal", "Temporal", "Occipital", "Cerebellum", "Parietal"].map((part) => (
           <button 
             key={part}
             onMouseEnter={() => setActivePart(part.toLowerCase())}
