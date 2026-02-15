@@ -7,6 +7,10 @@ import base64
 import math
 import mediapipe as mp
 import random
+import botocore.exceptions 
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
@@ -14,6 +18,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
+
+COGNITO_CLIENT_ID = os.environ.get('COGNITO_CLIENT_ID')
+cognito_client = boto3.client('cognito-idp', region_name='us-east-1')
 
 PICTURE_SHAPES = {
     "House": [(150, 350), (150, 200), (250, 100), (350, 200), (350, 350), (280, 350), (280, 260), (220, 260), (220, 350)],
@@ -55,31 +62,61 @@ def get_table():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-@app.route('/create-user', methods=['POST'])
-def create_user():
-    
+@app.route('/register', methods=['POST'])
+def register_user():
+    """
+    Handles AWS Cognito Signup AND creates the DynamoDB user in one go.
+    Requires: password, email, name, and birthdate.
+    """
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
-    user_id = data.get('user-id')
     
-    if not user_id:
-        return jsonify({"error": "Missing user_id"}), 400
+    password = data.get('password')
+    email = data.get('email')
+    name = data.get('name')
+    birthdate = data.get('birthdate') ## YYYY-MM-DD
     
-    table = get_table()
-    response = table.get_item(Key={'user-id': user_id})
-    if 'Item' in response:
-        return jsonify({"error": "User already exists"}), 400
+    if not all([password, email, name, birthdate]):
+        return jsonify({"error": "Missing required fields. Please provide password, email, name, and birthdate."}), 400
+
     try:
+        cognito_response = cognito_client.sign_up(
+            ClientId=COGNITO_CLIENT_ID,
+            Password=password,
+            UserAttributes=[
+                {'Name': 'email', 'Value': email},
+                {'Name': 'name', 'Value': name},
+                {'Name': 'birthdate', 'Value': birthdate}
+            ]
+        )
+        
+        cognito_user_id = cognito_response['UserSub']
+        
         table = get_table()
         table.put_item(Item={
-            'user-id': user_id,
+            'user-id': cognito_user_id,
+            'email': email,
+            'name': name,
             'streak': 0,
             'performance': 0
         })
-        return jsonify({"message": "User created successfully"}), 201
+        
+        return jsonify({
+            "message": "User created in Cognito and Database successfully!",
+            "user_id": cognito_user_id
+        }), 201
+
+    except botocore.exceptions.ClientError as error:
+        error_code = error.response['Error']['Code']
+        if error_code == 'InvalidPasswordException':
+            return jsonify({"error": "Password does not meet requirements"}), 400
+        elif error_code == 'InvalidParameterException':
+             return jsonify({"error": f"Invalid parameter: {error.response['Error']['Message']}"}), 400
+        else:
+            return jsonify({"error": error.response['Error']['Message']}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+         return jsonify({"error": str(e)}), 500
     
 @app.route('/increase-streak', methods=['POST'])
 def increase_streak():
