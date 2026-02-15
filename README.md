@@ -27,6 +27,7 @@ The project consists of two main components:
 - **OpenCV** (Image processing)
 - **Boto3** (AWS SDK for Cognito and DynamoDB)
 - **Gevent** (Asynchronous server)
+- AWS (ec2, Cognito, DynamoDB)
 
 
 ---
