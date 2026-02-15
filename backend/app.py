@@ -68,7 +68,7 @@ def health_check():
 def register_user():
     """
     Handles AWS Cognito Signup AND creates the DynamoDB user in one go.
-    Requires: password, email, name, and birthdate.
+    Requires: password, email, and birthdate.
     """
     data = request.get_json()
     if not data:
@@ -76,11 +76,10 @@ def register_user():
     
     password = data.get('password')
     email = data.get('email')
-    name = data.get('name')
     birthdate = data.get('birthdate') ## YYYY-MM-DD
     
-    if not all([password, email, name, birthdate]):
-        return jsonify({"error": "Missing required fields. Please provide password, email, name, and birthdate."}), 400
+    if not all([password, email, birthdate]):
+        return jsonify({"error": "Missing required fields. Please provide password, email, and birthdate."}), 400
 
     try:
         cognito_response = cognito_client.sign_up(
@@ -88,7 +87,6 @@ def register_user():
             Password=password,
             UserAttributes=[
                 {'Name': 'email', 'Value': email},
-                {'Name': 'name', 'Value': name},
                 {'Name': 'birthdate', 'Value': birthdate}
             ]
         )
@@ -99,7 +97,6 @@ def register_user():
         table.put_item(Item={
             'user-id': cognito_user_id,
             'email': email,
-            'name': name,
             'streak': 0,
             'performance': 0
         })

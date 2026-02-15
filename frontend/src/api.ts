@@ -1,0 +1,32 @@
+export const increaseStreak = async () => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) return;
+
+  try {
+    const response = await fetch("http://34.236.152.229/increase-streak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "user-id": userId }),
+    });
+    return await response.json();
+  } catch (err) {
+    console.error("Error increasing streak:", err);
+  }
+};
+
+export const getUserStats = async () => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) return null;
+
+  try {
+    const response = await fetch("http://34.236.152.229/get-user-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "user-id": userId }),
+    });
+    return await response.json();
+  } catch (err) {
+    console.error("Error fetching user stats:", err);
+    return null;
+  }
+};

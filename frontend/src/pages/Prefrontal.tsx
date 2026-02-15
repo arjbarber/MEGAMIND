@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { increaseStreak } from "../api";
 
 export default function Prefrontal() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Prefrontal() {
   const [answer, setAnswer] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [score, setScore] = useState<number>(0);
+  const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
   const TARGET_SCORE = 5;
 
@@ -52,6 +54,13 @@ export default function Prefrontal() {
   useEffect(() => {
     generateProblem();
   }, []);
+
+  useEffect(() => {
+    if (score >= TARGET_SCORE && !hasIncreasedStreak) {
+      increaseStreak();
+      setHasIncreasedStreak(true);
+    }
+  }, [score, hasIncreasedStreak]);
 
   const isComplete = score >= TARGET_SCORE;
 

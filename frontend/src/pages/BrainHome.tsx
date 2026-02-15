@@ -53,6 +53,35 @@ function BrainModel({ activePart }: { activePart: string | null }) {
 export default function BrainHome() {
   const navigate = useNavigate();
   const [activePart, setActivePart] = useState<string | null>(null);
+  const [streak, setStreak] = useState<number | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const userId = localStorage.getItem("user_id");
+
+  useEffect(() => {
+    if (userId) {
+      fetch("http://34.236.152.229/get-user-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ "user-id": userId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.streak !== undefined) {
+            setStreak(data.streak);
+            setUserEmail(data.email);
+          }
+        })
+        .catch((err) => console.error("Error fetching stats:", err));
+    }
+  }, [userId]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("access_token");
+    setStreak(null);
+    setUserEmail(null);
+    navigate("/");
+  };
 
   return (
     <div style={containerStyle}>
@@ -79,9 +108,24 @@ export default function BrainHome() {
 
       {/* RIGHT: Urban Noir Legend (UNCHANGED UI) */}
       <div style={legendStyle}>
-        <h2 style={titleStyle}>MEGAMIND!</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <h2 style={titleStyle}>MEGAMIND!</h2>
+          {userId ? (
+            <button onClick={handleLogout} style={logoutButtonStyle}>LOGOUT</button>
+          ) : (
+            <button onClick={() => navigate("/auth")} style={authButtonStyle}>SIGN IN</button>
+          )}
+        </div>
+        
+        {userId && userEmail && (
+          <div style={statsContainerStyle}>
+            <p style={{ color: CAROLINA_BLUE, margin: 0 }}>SUBJECT: {userEmail.toUpperCase()}</p>
+            <p style={{ color: "#FFF", fontSize: "1.2rem", margin: "0.5rem 0" }}>🔥 STREAK: {streak} DAYS</p>
+          </div>
+        )}
+
         <p style={{ color: '#556', marginBottom: '2rem', fontStyle: 'italic' }}>
-          Finish all 5 tests to unlock your colored brain!
+          {userId ? "Welcome back. Continue your training." : "Sign in to track your progress and streaks!"}
         </p>
 
         {["Prefrontal", "Temporal", "Occipital", "Cerebellum", "Parietal"].map((part) => (
@@ -108,6 +152,33 @@ export default function BrainHome() {
     </div>
   );
 }
+
+const authButtonStyle: React.CSSProperties = {
+  background: "transparent",
+  border: `1px solid ${CAROLINA_BLUE}`,
+  color: CAROLINA_BLUE,
+  padding: "0.5rem 1rem",
+  cursor: "pointer",
+  fontSize: "0.8rem",
+  letterSpacing: "2px",
+};
+
+const logoutButtonStyle: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid #444",
+  color: "#666",
+  padding: "0.5rem 1rem",
+  cursor: "pointer",
+  fontSize: "0.8rem",
+  letterSpacing: "2px",
+};
+
+const statsContainerStyle: React.CSSProperties = {
+  border: "1px solid #1a1a1c",
+  padding: "1rem",
+  marginTop: "1rem",
+  background: "rgba(123, 175, 212, 0.05)",
+};
 
 /* --- Urban Noir Aesthetics (UNCHANGED) --- */
 const containerStyle: React.CSSProperties = { 

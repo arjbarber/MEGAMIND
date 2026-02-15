@@ -5,11 +5,13 @@ import Temporal from "./pages/Temporal";
 import Occipital from "./pages/Occipital";
 import Cerebellum from "./pages/Cerebellum";
 import Parietal from "./pages/Parietal";
+import Auth from "./pages/Auth";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<BrainHome />} />
+      <Route path="/auth" element={<Auth />} />
       <Route path="/prefrontal" element={<Prefrontal />} />
       <Route path="/temporal" element={<Temporal />} />
       <Route path="/occipital" element={<Occipital />} />

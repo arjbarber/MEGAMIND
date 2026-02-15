@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { increaseStreak } from "../api";
 
 export default function Temporal() {
   const MAX_LEVEL = 5;
@@ -11,6 +12,7 @@ export default function Temporal() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [clickedIndex, setClickedIndex] = useState<number | null>(null);
   const [message, setMessage] = useState<string>("Click Start to Begin");
+  const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
   const generateNext = () => {
     if (level > MAX_LEVEL) return;
@@ -55,6 +57,10 @@ export default function Temporal() {
     if (newInput.length === sequence.length) {
       if (level === MAX_LEVEL) {
         setMessage("Temporal Lobe Activated ✨");
+        if (!hasIncreasedStreak) {
+          increaseStreak();
+          setHasIncreasedStreak(true);
+        }
         return;
       }
 
