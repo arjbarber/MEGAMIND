@@ -121,6 +121,34 @@ def register_user():
     except Exception as e:
          return jsonify({"error": str(e)}), 500
 
+@app.route('/verify', methods=['POST'])
+def verify_user():
+    """
+    Confirms the user's email using the code sent by AWS Cognito.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    
+    email = data.get('email')
+    code = data.get('code')
+    
+    if not all([email, code]):
+        return jsonify({"error": "Missing email or verification code"}), 400
+
+    try:
+        cognito_client.confirm_sign_up(
+            ClientId=COGNITO_CLIENT_ID,
+            Username=email,
+            ConfirmationCode=code
+        )
+        return jsonify({"message": "User verified successfully! You can now sign in."}), 200
+
+    except botocore.exceptions.ClientError as error:
+        return jsonify({"error": error.response['Error']['Message']}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/login', methods=['POST'])
 def login_user():
     data = request.get_json()
