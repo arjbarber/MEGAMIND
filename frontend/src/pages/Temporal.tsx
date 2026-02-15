@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { increaseStreak } from "../api";
 
 export default function Temporal() {
+  const navigate = useNavigate();
   const MAX_LEVEL = 5;
   const gridSize = 9;
+  const TEMPORAL_GREEN = "#04f665";
 
   const [sequence, setSequence] = useState<number[]>([]);
   const [userInput, setUserInput] = useState<number[]>([]);
@@ -14,59 +16,66 @@ export default function Temporal() {
   const [message, setMessage] = useState<string>("Click Start to Begin");
   const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
-  const generateNext = () => {
-    if (level > MAX_LEVEL) return;
+  // Generate the next sequence step, but stop if we are past MAX_LEVEL
+  const generateNext = (currentLevel: number) => {
+    if (currentLevel > MAX_LEVEL) return;
 
-    const next = Math.floor(Math.random() * gridSize);
-    const newSequence = [...sequence, next];
-    setSequence(newSequence);
+    setSequence((prev) => {
+      const next = Math.floor(Math.random() * gridSize);
+      const newSequence = [...prev, next];
+      playSequence(newSequence);
+      return newSequence;
+    });
     setUserInput([]);
-    playSequence(newSequence);
   };
 
   const playSequence = async (seq: number[]) => {
     setMessage("Watch Carefully");
-
     for (let i = 0; i < seq.length; i++) {
       setActiveIndex(seq[i]);
-      await new Promise((r) => setTimeout(r, 900));
+      await new Promise((r) => setTimeout(r, 800));
       setActiveIndex(null);
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 300));
     }
-
     setMessage("Now Your Turn");
   };
 
   const handleClick = (index: number) => {
+    // Prevent interaction if showing sequence or if already calibrated
     if (activeIndex !== null || level > MAX_LEVEL) return;
 
     setClickedIndex(index);
-    setTimeout(() => setClickedIndex(null), 300);
+    setTimeout(() => setClickedIndex(null), 250);
 
     const newInput = [...userInput, index];
     setUserInput(newInput);
 
+    // FAILURE LOGIC: Reset to Level 1
     if (sequence[newInput.length - 1] !== index) {
-      setMessage("Not quite right. Starting over.");
+      setMessage("Calibration Failed. Resetting Neurons.");
       setSequence([]);
       setLevel(1);
       setUserInput([]);
       return;
     }
 
+    // SUCCESS LOGIC: Move forward or Complete
     if (newInput.length === sequence.length) {
       if (level === MAX_LEVEL) {
-        setMessage("Temporal Lobe Activated ✨");
+        // BREAK THE LOOP: Stop here and activate
+        setMessage("Temporal Lobe Calibrated ✨");
+        setLevel(6); // Set above MAX_LEVEL to show success screen
+        
         if (!hasIncreasedStreak) {
           increaseStreak("temporal");
           setHasIncreasedStreak(true);
         }
-        return;
+      } else {
+        const nextLevel = level + 1;
+        setLevel(nextLevel);
+        setMessage(`Success. Calibrating Level ${nextLevel}...`);
+        setTimeout(() => generateNext(nextLevel), 1000);
       }
-
-      setLevel((prev) => prev + 1);
-      setMessage("Great job! Next level.");
-      setTimeout(() => generateNext(), 1200);
     }
   };
 
@@ -74,86 +83,79 @@ export default function Temporal() {
     setSequence([]);
     setLevel(1);
     setUserInput([]);
-    setMessage("Watch Carefully");
-    setTimeout(() => generateNext(), 600);
+    setHasIncreasedStreak(false);
+    setMessage("Initializing...");
+    setTimeout(() => generateNext(1), 600);
   };
 
+  const isComplete = level > MAX_LEVEL;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0B0F14",
-        color: "white",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        paddingTop: "3rem",
-        fontFamily: "system-ui",
-        textAlign: "center"
-      }}
-    >
-      <h1 style={{ fontSize: "2.5rem" }}>Temporal Lobe</h1>
-      <p style={{ fontSize: "1.2rem" }}>Memory Pattern Game</p>
-
-      <h2 style={{ fontSize: "1.8rem" }}>Level: {level} / {MAX_LEVEL}</h2>
-      <p style={{ fontSize: "1.2rem" }}>{message}</p>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 130px)",
-          gap: "25px",
-          marginTop: "2rem"
-        }}
-      >
-        {Array.from({ length: gridSize }).map((_, i) => {
-          const isActive = activeIndex === i;
-          const isClicked = clickedIndex === i;
-
-          return (
-            <div
-              key={i}
-              onClick={() => handleClick(i)}
-              style={{
-                width: "130px",
-                height: "130px",
-                borderRadius: "16px",
-                background: isActive
-                  ? "#FFD700"
-                  : isClicked
-                  ? "#90EE90"
-                  : "#2A2F36",
-                cursor: "pointer",
-                transition: "all 0.3s",
-                boxShadow:
-                  isActive || isClicked
-                    ? "0 0 25px #FFD700"
-                    : "none"
-              }}
-            />
-          );
-        })}
+    <div style={containerStyle}>
+      {/* 🟢 Persistent Navigation Bar */}
+      <div style={navBarStyle}>
+        <button onClick={() => navigate("/")} style={backButtonStyle}>
+          ← BACK TO BRAIN
+        </button>
       </div>
 
-      <button
-        onClick={startGame}
-        style={{
-          marginTop: "2rem",
-          padding: "1rem 2.5rem",
-          fontSize: "1.2rem",
-          borderRadius: "12px",
-          border: "none",
-          background: "#FFD700",
-          color: "#000",
-          cursor: "pointer"
-        }}
-      >
-        Start
-      </button>
+      <div style={contentStyle}>
+        <h1 style={{ fontSize: "2.5rem", letterSpacing: "4px", margin: 0 }}>TEMPORAL LOBE</h1>
+        <p style={{ fontSize: "1.2rem", color: "#889", marginBottom: "1rem" }}>AUDITORY & MEMORY SYNC</p>
 
-      <Link to="/" style={{ marginTop: "2rem", color: "#FFD700", fontSize: "1.1rem" }}>
-        ← Back to Brain
-      </Link>
+        {!isComplete ? (
+          <>
+            <h2 style={{ fontSize: "1.8rem", color: TEMPORAL_GREEN }}>LEVEL: {level} / {MAX_LEVEL}</h2>
+            <p style={{ fontSize: "1.2rem", marginBottom: "2rem", letterSpacing: "2px" }}>{message.toUpperCase()}</p>
+
+            <div style={gridLayoutStyle}>
+              {Array.from({ length: gridSize }).map((_, i) => {
+                const isActive = activeIndex === i;
+                const isClicked = clickedIndex === i;
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => handleClick(i)}
+                    style={{
+                      ...gridSquareStyle,
+                      background: isActive || isClicked ? TEMPORAL_GREEN : "#1a1a1c",
+                      boxShadow: isActive || isClicked ? `0 0 25px ${TEMPORAL_GREEN}` : "none",
+                      borderColor: isActive || isClicked ? "white" : "#334"
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <button onClick={startGame} style={noirButtonStyle}>
+              {sequence.length === 0 ? "INITIATE SCAN" : "RESTART"}
+            </button>
+          </>
+        ) : (
+          <div style={successOverlayStyle}>
+            <h2 style={{ fontSize: "2.5rem", marginBottom: "1.5rem" }}>
+              SECTOR STABILIZED ✨
+            </h2>
+            <p style={{ color: "#889", marginBottom: "2.5rem", fontSize: "1.1rem" }}>
+              Memory patterns verified. Temporal pathways are clear, Detective.
+            </p>
+            <button onClick={() => navigate("/")} style={noirButtonStyle}>
+              RETURN TO BRAIN
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+/* --- Thematic Styles for Urban Noir --- */
+const containerStyle: React.CSSProperties = { minHeight: "100vh", background: "#050507", color: "#04f665", display: "flex", flexDirection: "column", fontFamily: '"Courier New", monospace' };
+const navBarStyle: React.CSSProperties = { padding: "20px 40px", borderBottom: "1px solid rgba(4, 246, 101, 0.1)", background: "rgba(10, 10, 12, 0.9)" };
+const backButtonStyle: React.CSSProperties = { background: "transparent", color: "#04f665", border: "1px solid #04f665", padding: "10px 20px", cursor: "pointer", letterSpacing: "2px" };
+const contentStyle: React.CSSProperties = { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem" };
+const gridLayoutStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(3, 110px)", gap: "15px", marginTop: "1rem" };
+const gridSquareStyle: React.CSSProperties = { width: "110px", height: "110px", borderRadius: "8px", border: "1px solid #334", cursor: "pointer", transition: "all 0.2s" };
+const noirButtonStyle: React.CSSProperties = { marginTop: "2.5rem", padding: "1rem 2.5rem", fontSize: "1.1rem", background: "#04f665", color: "#000", border: "none", fontWeight: "bold", cursor: "pointer", letterSpacing: "3px" };
+const successOverlayStyle: React.CSSProperties = { padding: "4rem", border: "2px solid #04f665", background: "rgba(4, 246, 101, 0.05)", borderRadius: "8px", maxWidth: "600px" };

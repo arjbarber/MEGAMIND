@@ -28,10 +28,20 @@ function BrainModel({
   const { scene } = useGLTF("/models/brain.glb");
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
+  // 🔥 AUTO-CENTER THE MODEL
+  useEffect(() => {
+    const box = new THREE.Box3().setFromObject(clonedScene);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    clonedScene.position.sub(center); // shift model so center becomes (0,0,0)
+  }, [clonedScene]);
+
   useEffect(() => {
     clonedScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+
         if (mesh.material instanceof THREE.MeshStandardMaterial) {
           mesh.material = mesh.material.clone();
           mesh.material.roughness = 0.6;
@@ -39,9 +49,10 @@ function BrainModel({
 
           const name = mesh.name.toLowerCase();
 
-          // Map anatomical naming to our region keys
           const region = Object.keys(COLORS).find((key) =>
-            key === "prefrontal" ? name.includes("frontal") : name.includes(key)
+            key === "prefrontal"
+              ? name.includes("frontal")
+              : name.includes(key)
           );
 
           if (!region) return;
@@ -66,6 +77,7 @@ function BrainModel({
 
   return <primitive object={clonedScene} scale={3.8} />;
 }
+
 
 /* ========================= */
 /* 🧠 Main BrainHome        */
