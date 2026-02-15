@@ -6,6 +6,7 @@ import numpy as np
 import base64
 import math
 import mediapipe as mp
+import random
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
@@ -14,7 +15,16 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
-SHAPE_NODES = [(100, 100), (300, 100), (300, 300), (100, 300)] 
+PICTURE_SHAPES = {
+    "House": [(150, 350), (150, 200), (250, 100), (350, 200), (350, 350), (280, 350), (280, 260), (220, 260), (220, 350)],
+    "Crown": [(150, 300), (150, 150), (210, 220), (250, 100), (290, 220), (350, 150), (350, 300)],
+    "Diamond": [(250, 100), (350, 150), (400, 200), (250, 350), (100, 200), (150, 150)]
+}
+
+COLORS = [
+    (0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0),
+    (255, 0, 255), (128, 0, 128), (255, 165, 0), (0, 128, 128), (200, 200, 200)
+]
 HIT_RADIUS = 30
 
 user_game_state = {} 
@@ -118,10 +128,14 @@ def handle_frame(data):
         h, w, c = img.shape
 
         if user_id not in user_game_state:
-            user_game_state[user_id] = 0
+            user_game_state[user_id] = {
+                'progress': 0,
+                'shape_name': random.choice(list(PICTURE_SHAPES.keys()))
+            }
             
-        current_node_idx = user_game_state[user_id]
-        game_completed = current_node_idx >= len(SHAPE_NODES)
+        current_node_idx = user_game_state[user_id]['progress']
+        current_shape = PICTURE_SHAPES[user_game_state[user_id]['shape_name']]
+        game_completed = current_node_idx >= len(current_shape)
 
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         results = hands.process(img_rgb)
@@ -134,29 +148,34 @@ def handle_frame(data):
                 
                 cv2.circle(img, finger_pos, 10, (255, 0, 255), cv2.FILLED)
 
-                target_node = SHAPE_NODES[current_node_idx]
+                target_node = current_shape[current_node_idx]
                 dist = math.dist(finger_pos, target_node)
                 
                 if dist < HIT_RADIUS:
-                    user_game_state[user_id] += 1
+                    user_game_state[user_id]['progress'] += 1
                     current_node_idx += 1
                 break
 
         for i in range(1, current_node_idx):
-            cv2.line(img, SHAPE_NODES[i-1], SHAPE_NODES[i], (0, 255, 0), 3)
+            color = COLORS[(i-1) % len(COLORS)]
+            cv2.line(img, current_shape[i-1], current_shape[i], color, 4)
 
         if not game_completed:
             if current_node_idx > 0 and finger_pos:
-                cv2.line(img, SHAPE_NODES[current_node_idx-1], finger_pos, (255, 0, 0), 2)
+                active_color = COLORS[current_node_idx % len(COLORS)]
+                cv2.line(img, current_shape[current_node_idx-1], finger_pos, active_color, 2)
 
-            for i in range(current_node_idx, len(SHAPE_NODES)):
-                node = SHAPE_NODES[i]
-                color = (0, 0, 255) if i == current_node_idx else (200, 200, 200)
+            for i in range(current_node_idx, len(current_shape)):
+                node = current_shape[i]
+                color = COLORS[i % len(COLORS)] if i == current_node_idx else (200, 200, 200)
                 cv2.circle(img, node, 15, color, cv2.FILLED)
                 cv2.putText(img, str(i+1), (node[0]-10, node[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         else:
-            cv2.line(img, SHAPE_NODES[-1], SHAPE_NODES[0], (0, 255, 0), 3)
-            cv2.putText(img, "COMPLETED!", (w//2 - 100, h//2), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+            final_color = COLORS[-1 % len(COLORS)]
+            cv2.line(img, current_shape[-1], current_shape[0], final_color, 4)
+            
+            shape_name = user_game_state[user_id]['shape_name'].upper()
+            cv2.putText(img, f"YOU DREW A {shape_name}!", (50, h//2), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
 
         _, buffer = cv2.imencode('.jpg', img)
         processed_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -173,7 +192,11 @@ def handle_frame(data):
 @socketio.on('reset_game')
 def handle_reset(data):
     user_id = data.get('user_id', 'anonymous')
-    user_game_state[user_id] = 0
+    # Pick a new random picture on reset!
+    user_game_state[user_id] = {
+        'progress': 0,
+        'shape_name': random.choice(list(PICTURE_SHAPES.keys()))
+    }
     print(f"Game state reset for user: {user_id}")
     emit('status_update', {'message': 'Game reset successfully'})
 
