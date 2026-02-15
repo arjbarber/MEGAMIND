@@ -57,7 +57,7 @@ export default function Prefrontal() {
 
   useEffect(() => {
     if (score >= TARGET_SCORE && !hasIncreasedStreak) {
-      increaseStreak();
+      increaseStreak("prefrontal");
       setHasIncreasedStreak(true);
     }
   }, [score, hasIncreasedStreak]);

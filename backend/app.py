@@ -9,6 +9,7 @@ import mediapipe as mp
 import random
 import botocore.exceptions 
 import os
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask_cors import CORS
 load_dotenv()
@@ -102,7 +103,10 @@ def register_user():
             'email': email,
             'name': name,
             'streak': 0,
-            'performance': 0
+            'performance': 0,
+            'completed_tasks': set(),
+            'last_streak_date': '',
+            'last_task_date': ''
         })
         
         return jsonify({
@@ -218,7 +222,31 @@ def get_user_stats():
     try:
         response = table.get_item(Key={'user-id': user_id})
         if 'Item' in response:
-            return jsonify(response['Item']), 200
+            item = response['Item']
+            streak = item.get('streak', 0)
+            last_streak_date_str = item.get('last_streak_date', '')
+            today = datetime.now().date()
+            yesterday = today - timedelta(days=1)
+            
+            # Reset streak if missed a day
+            if last_streak_date_str:
+                last_streak_date = datetime.strptime(last_streak_date_str, '%Y-%m-%d').date()
+                if last_streak_date < yesterday:
+                    streak = 0
+                    table.update_item(
+                        Key={'user-id': user_id},
+                        UpdateExpression="SET streak = :s",
+                        ExpressionAttributeValues={':s': 0}
+                    )
+                    item['streak'] = 0
+
+            # Convert sets to lists for JSON serialization
+            if 'completed_tasks' in item and isinstance(item['completed_tasks'], set):
+                item['completed_tasks'] = list(item['completed_tasks'])
+            elif 'completed_tasks' not in item:
+                item['completed_tasks'] = []
+
+            return jsonify(item), 200
         else:
             return jsonify({"error": "User not found"}), 404
     except Exception as e:
@@ -230,18 +258,61 @@ def increase_streak():
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
     user_id = data.get('user-id')
-    if not user_id:
-        return jsonify({"error": "Missing user_id"}), 400
+    task = data.get('task')
+    if not user_id or not task:
+        return jsonify({"error": "Missing user_id or task"}), 400
 
     table = get_table()
     try:
-        response = table.update_item(
+        # Get current user state
+        user_res = table.get_item(Key={'user-id': user_id})
+        if 'Item' not in user_res:
+             return jsonify({"error": "User not found"}), 404
+        
+        user = user_res['Item']
+        today = datetime.now().date()
+        today_str = today.strftime('%Y-%m-%d')
+        yesterday = today - timedelta(days=1)
+        yesterday_str = yesterday.strftime('%Y-%m-%d')
+
+        last_task_date = user.get('last_task_date', '')
+        completed_tasks = user.get('completed_tasks', set())
+        streak = user.get('streak', 0)
+        last_streak_date = user.get('last_streak_date', '')
+
+        # If it's a new day, clear completed tasks
+        if last_task_date != today_str:
+            completed_tasks = set()
+            last_task_date = today_str
+        
+        # Add current task
+        completed_tasks.add(task)
+
+        message = f"Task {task} recorded."
+        new_streak = streak
+
+        # Check if all 5 unique tasks are completed and not already updated today
+        if len(completed_tasks) >= 5 and last_streak_date != today_str:
+            if last_streak_date == yesterday_str:
+                new_streak += 1
+            else:
+                new_streak = 1
+            last_streak_date = today_str
+            message = "All tasks completed! Streak increased."
+
+        # Update database
+        table.update_item(
             Key={'user-id': user_id},
-            UpdateExpression="ADD streak :val",
-            ExpressionAttributeValues={':val': 1},
-            ReturnValues="UPDATED_NEW"
+            UpdateExpression="SET completed_tasks = :ct, last_task_date = :ltd, streak = :s, last_streak_date = :lsd",
+            ExpressionAttributeValues={
+                ':ct': completed_tasks,
+                ':ltd': last_task_date,
+                ':s': new_streak,
+                ':lsd': last_streak_date
+            }
         )
-        return jsonify({"message": "Streak increased", "new_streak": response['Attributes']['streak']}), 200
+
+        return jsonify({"message": message, "new_streak": new_streak, "completed_tasks": list(completed_tasks)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
@@ -259,8 +330,8 @@ def reset_streak():
     try:
         response = table.update_item(
             Key={'user-id': user_id},
-            UpdateExpression="SET streak = :val",
-            ExpressionAttributeValues={':val': 0},
+            UpdateExpression="SET streak = :val, last_streak_date = :lsd, completed_tasks = :ct",
+            ExpressionAttributeValues={':val': 0, ':lsd': '', ':ct': set()},
             ReturnValues="UPDATED_NEW"
         )
         return jsonify({"message": "Streak reset", "new_streak": response['Attributes']['streak']}), 200

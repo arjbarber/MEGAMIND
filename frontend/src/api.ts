@@ -1,4 +1,4 @@
-export const increaseStreak = async () => {
+export const increaseStreak = async (taskName: string) => {
   const userId = localStorage.getItem("user_id");
   if (!userId) return;
 
@@ -6,11 +6,11 @@ export const increaseStreak = async () => {
     const response = await fetch("http://34.236.152.229/increase-streak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "user-id": userId }),
+      body: JSON.stringify({ "user-id": userId, "task": taskName }),
     });
     return await response.json();
   } catch (err) {
-    console.error("Error increasing streak:", err);
+    console.error("Error updating task progress:", err);
   }
 };
 

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getCerebellumReport } from '../gemini';
+import { increaseStreak } from "../api";
 
 interface Props {
   onSuccess: (part: string) => void;
@@ -12,6 +13,7 @@ const CerebellumTest: React.FC<Props> = ({ onSuccess, onBack }) => {
   const [isTesting, setIsTesting] = useState(false);
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
   const totalClicksNeeded = 5;
 
@@ -33,7 +35,7 @@ const CerebellumTest: React.FC<Props> = ({ onSuccess, onBack }) => {
       try {
         const aiReport = await getCerebellumReport(100);
         setReport(aiReport);
-        onSuccess("cerebellum"); // Activates glow at base/back of brain
+        if (onSuccess) onSuccess("cerebellum"); // Activates glow at base/back of brain
       } catch (e) {
         setReport("Scan complete. System stabilized under the Carolina haze.");
       } finally {
@@ -42,10 +44,18 @@ const CerebellumTest: React.FC<Props> = ({ onSuccess, onBack }) => {
     }
   };
 
+  useEffect(() => {
+    if (report && !hasIncreasedStreak) {
+      increaseStreak("cerebellum");
+      setHasIncreasedStreak(true);
+    }
+  }, [report, hasIncreasedStreak]);
+
   const startTest = () => {
     setClickCount(0);
     setReport("");
     setIsTesting(true);
+    setHasIncreasedStreak(false);
     moveTarget();
   };
 

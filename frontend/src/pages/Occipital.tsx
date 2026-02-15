@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { increaseStreak } from "../api";
 
 type CardType = {
   id: number;
@@ -44,6 +45,7 @@ export default function Occipital() {
   const [cards, setCards] = useState<CardType[]>(initialCards);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [completed, setCompleted] = useState(false);
+  const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
   const handleFlip = (index: number) => {
     if (flipped.length === 2 || flipped.includes(index) || cards[index].matched)
@@ -71,10 +73,18 @@ export default function Occipital() {
     }
   };
 
+  useEffect(() => {
+    if (completed && !hasIncreasedStreak) {
+      increaseStreak("occipital");
+      setHasIncreasedStreak(true);
+    }
+  }, [completed, hasIncreasedStreak]);
+
   const restart = () => {
     setCards(initialCards);
     setFlipped([]);
     setCompleted(false);
+    setHasIncreasedStreak(false);
   };
 
   return (

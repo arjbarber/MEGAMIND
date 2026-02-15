@@ -7,7 +7,7 @@ import * as THREE from "three";
 const CAROLINA_BLUE = "#7BAFD4";
 
 /* 🧠 Brain Model – Safe + Visible */
-function BrainModel({ activePart }: { activePart: string | null }) {
+function BrainModel({ activePart, completedTasks }: { activePart: string | null, completedTasks: string[] }) {
   const { scene } = useGLTF("/models/brain.glb");
 
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
@@ -26,16 +26,26 @@ function BrainModel({ activePart }: { activePart: string | null }) {
 
           const name = mesh.name.toLowerCase();
 
-          const matches =
+          const isCompleted =
+            (completedTasks.includes("prefrontal") && name.includes("frontal")) ||
+            (completedTasks.includes("temporal") && name.includes("temporal")) ||
+            (completedTasks.includes("occipital") && name.includes("occipital")) ||
+            (completedTasks.includes("cerebellum") && name.includes("cerebellum")) ||
+            (completedTasks.includes("parietal") && name.includes("parietal"));
+
+          const isHovered =
             (activePart === "prefrontal" && name.includes("frontal")) ||
             (activePart === "temporal" && name.includes("temporal")) ||
             (activePart === "occipital" && name.includes("occipital")) ||
             (activePart === "cerebellum" && name.includes("cerebellum")) ||
             (activePart === "parietal" && name.includes("parietal"));
 
-          if (matches) {
+          if (isHovered) {
             mesh.material.emissive = new THREE.Color(CAROLINA_BLUE);
             mesh.material.emissiveIntensity = 2.2;
+          } else if (isCompleted) {
+            mesh.material.emissive = new THREE.Color(CAROLINA_BLUE);
+            mesh.material.emissiveIntensity = 0.8;
           } else {
             // DO NOT darken base material
             mesh.material.emissive = new THREE.Color("#000000");
@@ -44,7 +54,7 @@ function BrainModel({ activePart }: { activePart: string | null }) {
         }
       }
     });
-  }, [clonedScene, activePart]);
+  }, [clonedScene, activePart, completedTasks]);
 
   return <primitive object={clonedScene} scale={3.8} />;
 }
@@ -55,6 +65,7 @@ export default function BrainHome() {
   const [activePart, setActivePart] = useState<string | null>(null);
   const [streak, setStreak] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const userId = localStorage.getItem("user_id");
 
   useEffect(() => {
@@ -69,6 +80,7 @@ export default function BrainHome() {
           if (data.streak !== undefined) {
             setStreak(data.streak);
             setUserEmail(data.email);
+            setCompletedTasks(data.completed_tasks || []);
           }
         })
         .catch((err) => console.error("Error fetching stats:", err));
@@ -80,6 +92,7 @@ export default function BrainHome() {
     localStorage.removeItem("access_token");
     setStreak(null);
     setUserEmail(null);
+    setCompletedTasks([]);
     navigate("/");
   };
 
@@ -95,7 +108,7 @@ export default function BrainHome() {
           <directionalLight position={[10, -5, 10]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <BrainModel activePart={activePart} />
+            <BrainModel activePart={activePart} completedTasks={completedTasks} />
           </Suspense>
 
           <OrbitControls
@@ -121,6 +134,7 @@ export default function BrainHome() {
           <div style={statsContainerStyle}>
             <p style={{ color: CAROLINA_BLUE, margin: 0 }}>SUBJECT: {userEmail.toUpperCase()}</p>
             <p style={{ color: "#FFF", fontSize: "1.2rem", margin: "0.5rem 0" }}>🔥 STREAK: {streak} DAYS</p>
+            <p style={{ color: "#556", fontSize: "0.8rem" }}>TASKS COMPLETED: {completedTasks.length} / 5</p>
           </div>
         )}
 
@@ -136,17 +150,19 @@ export default function BrainHome() {
             onClick={() => navigate(`/${part.toLowerCase()}`)} 
             style={{
               ...buttonStyle,
-              borderColor: activePart === part.toLowerCase() ? CAROLINA_BLUE : "#1a1a1c",
-              color: activePart === part.toLowerCase() ? CAROLINA_BLUE : "#889"
+              borderColor: activePart === part.toLowerCase() ? CAROLINA_BLUE : 
+                           completedTasks.includes(part.toLowerCase()) ? "rgba(123, 175, 212, 0.4)" : "#1a1a1c",
+              color: activePart === part.toLowerCase() ? CAROLINA_BLUE : 
+                     completedTasks.includes(part.toLowerCase()) ? CAROLINA_BLUE : "#889"
             }}
           >
-            {part.toUpperCase()}
+            {part.toUpperCase()} {completedTasks.includes(part.toLowerCase()) && "✔"}
           </button>
         ))}
         
         <div style={footerStyle}>
           <p>EST. 2026 | SECTOR: {activePart ? activePart.toUpperCase() : "STANDBY"}</p>
-          <p>COORDINATION STATUS: NOMINAL</p>
+          <p>COORDINATION STATUS: {completedTasks.length === 5 ? "MAXIMAL" : "NOMINAL"}</p>
         </div>
       </div>
     </div>

@@ -58,7 +58,7 @@ export default function Temporal() {
       if (level === MAX_LEVEL) {
         setMessage("Temporal Lobe Activated ✨");
         if (!hasIncreasedStreak) {
-          increaseStreak();
+          increaseStreak("temporal");
           setHasIncreasedStreak(true);
         }
         return;

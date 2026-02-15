@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
+import { increaseStreak } from "../api";
 
 const SOCKET_URL = "http://34.236.152.229";
 
@@ -11,6 +12,7 @@ export default function Parietal() {
   const [completedShapes, setCompletedShapes] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("Initializing camera...");
   const [isTaskComplete, setIsTaskComplete] = useState<boolean>(false);
+  const [hasIncreasedStreak, setHasIncreasedStreak] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,6 +84,13 @@ export default function Parietal() {
       socket.off("status_update");
     };
   }, [socket, isTaskComplete]);
+
+  useEffect(() => {
+    if (isTaskComplete && !hasIncreasedStreak) {
+      increaseStreak("parietal");
+      setHasIncreasedStreak(true);
+    }
+  }, [isTaskComplete, hasIncreasedStreak]);
 
   // Camera & Frame Loop
   useEffect(() => {
