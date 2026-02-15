@@ -117,6 +117,69 @@ def register_user():
             return jsonify({"error": error.response['Error']['Message']}), 500
     except Exception as e:
          return jsonify({"error": str(e)}), 500
+
+@app.route('/login', methods=['POST'])
+def login_user():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not all([email, password]):
+        return jsonify({"error": "Missing email or password"}), 400
+
+    try:
+        response = cognito_client.initiate_auth(
+            ClientId=COGNITO_CLIENT_ID,
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters={
+                'USERNAME': email,
+                'PASSWORD': password
+            }
+        )
+        
+        # We need to get the UserSub to identify them in DynamoDB
+        # initiate_auth doesn't return UserSub directly in a simple way if not configured, 
+        # but we can get it from the access token or by calling get_user if we had the token.
+        # Alternatively, we can search for the user by email to get their Sub.
+        
+        user_response = cognito_client.get_user(
+            AccessToken=response['AuthenticationResult']['AccessToken']
+        )
+        
+        user_sub = next(attr['Value'] for attr in user_response['UserAttributes'] if attr['Name'] == 'sub')
+        
+        return jsonify({
+            "message": "Login successful",
+            "access_token": response['AuthenticationResult']['AccessToken'],
+            "user_id": user_sub
+        }), 200
+
+    except botocore.exceptions.ClientError as error:
+        return jsonify({"error": error.response['Error']['Message']}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/get-user-stats', methods=['POST'])
+def get_user_stats():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+    user_id = data.get('user-id')
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    table = get_table()
+    try:
+        response = table.get_item(Key={'user-id': user_id})
+        if 'Item' in response:
+            return jsonify(response['Item']), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 @app.route('/increase-streak', methods=['POST'])
 def increase_streak():
