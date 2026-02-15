@@ -142,27 +142,39 @@ def login_user():
             }
         )
         
-        # We need to get the UserSub to identify them in DynamoDB
-        # initiate_auth doesn't return UserSub directly in a simple way if not configured, 
-        # but we can get it from the access token or by calling get_user if we had the token.
-        # Alternatively, we can search for the user by email to get their Sub.
+        # FIX 1: Safely handle Cognito "Challenges" (like forcing a password reset)
+        if 'ChallengeName' in response:
+            return jsonify({"error": f"AWS Challenge Required: {response['ChallengeName']}. User may be unconfirmed."}), 403
+
+        # FIX 2: Safely extract the Access Token
+        auth_result = response.get('AuthenticationResult')
+        if not auth_result:
+            return jsonify({"error": "Failed to retrieve authentication tokens."}), 500
+            
+        access_token = auth_result['AccessToken']
         
-        user_response = cognito_client.get_user(
-            AccessToken=response['AuthenticationResult']['AccessToken']
-        )
-        
+        # Get the UserSub safely
+        user_response = cognito_client.get_user(AccessToken=access_token)
         user_sub = next(attr['Value'] for attr in user_response['UserAttributes'] if attr['Name'] == 'sub')
         
         return jsonify({
             "message": "Login successful",
-            "access_token": response['AuthenticationResult']['AccessToken'],
+            "access_token": access_token,
             "user_id": user_sub
         }), 200
 
     except botocore.exceptions.ClientError as error:
-        return jsonify({"error": error.response['Error']['Message']}), 400
+        error_code = error.response['Error']['Code']
+        # FIX 3: Catch specific AWS errors so the frontend knows exactly what went wrong
+        if error_code == 'UserNotConfirmedException':
+            return jsonify({"error": "Please confirm your email address before logging in."}), 400
+        elif error_code == 'NotAuthorizedException':
+            return jsonify({"error": "Incorrect email/password OR 'ALLOW_USER_PASSWORD_AUTH' is disabled in AWS."}), 400
+        else:
+            return jsonify({"error": error.response['Error']['Message']}), 400
+            
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 @app.route('/get-user-stats', methods=['POST'])
 def get_user_stats():
