@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { increaseStreak } from "../api";
 
-const SOCKET_URL = "http://34.236.152.229";
+const SOCKET_URL = "https://decadally-unvivacious-cristian.ngrok-free.dev";
 
 export default function Parietal() {
   const navigate = useNavigate();

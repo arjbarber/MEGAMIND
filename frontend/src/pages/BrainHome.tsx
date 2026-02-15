@@ -101,7 +101,7 @@ export default function BrainHome() {
   // 📊 Database Sync
   useEffect(() => {
     if (!userId) return;
-    fetch("http://34.236.152.229/get-user-stats", {
+    fetch("https://decadally-unvivacious-cristian.ngrok-free.dev/get-user-stats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ "user-id": userId }),

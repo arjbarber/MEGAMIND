@@ -3,7 +3,7 @@ export const increaseStreak = async (taskName: string) => {
   if (!userId) return;
 
   try {
-    const response = await fetch("http://34.236.152.229/increase-streak", {
+    const response = await fetch("https://decadally-unvivacious-cristian.ngrok-free.dev/increase-streak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ "user-id": userId, "task": taskName }),
@@ -19,7 +19,7 @@ export const getUserStats = async () => {
   if (!userId) return null;
 
   try {
-    const response = await fetch("http://34.236.152.229/get-user-stats", {
+    const response = await fetch("https://decadally-unvivacious-cristian.ngrok-free.dev/get-user-stats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ "user-id": userId }),
