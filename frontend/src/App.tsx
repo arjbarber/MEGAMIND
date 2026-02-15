@@ -3,6 +3,7 @@ import BrainHome from "./pages/BrainHome";
 import Prefrontal from "./pages/Prefrontal";
 import Temporal from "./pages/Temporal";
 import Occipital from "./pages/Occipital";
+import Cerebellum from "./pages/Cerebellum"; // 👈 ADD THIS
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <Route path="/prefrontal" element={<Prefrontal />} />
       <Route path="/temporal" element={<Temporal />} />
       <Route path="/occipital" element={<Occipital />} />
+      <Route path="/cerebellum" element={<Cerebellum />} /> {/* 👈 ADD THIS */}
     </Routes>
   );
 }
