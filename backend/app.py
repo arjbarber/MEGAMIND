@@ -104,7 +104,7 @@ def register_user():
             'name': name,
             'streak': 0,
             'performance': 0,
-            'completed_tasks': set(),
+            'completed_tasks': [],
             'last_streak_date': '',
             'last_task_date': ''
         })
@@ -240,7 +240,7 @@ def get_user_stats():
                     )
                     item['streak'] = 0
 
-            # Convert sets to lists for JSON serialization
+            # Ensure completed_tasks is a list for JSON serialization (handles legacy sets)
             if 'completed_tasks' in item and isinstance(item['completed_tasks'], set):
                 item['completed_tasks'] = list(item['completed_tasks'])
             elif 'completed_tasks' not in item:
@@ -276,7 +276,8 @@ def increase_streak():
         yesterday_str = yesterday.strftime('%Y-%m-%d')
 
         last_task_date = user.get('last_task_date', '')
-        completed_tasks = user.get('completed_tasks', set())
+        completed_tasks_list = user.get('completed_tasks', [])
+        completed_tasks = set(completed_tasks_list)
         streak = user.get('streak', 0)
         last_streak_date = user.get('last_streak_date', '')
 
@@ -300,12 +301,12 @@ def increase_streak():
             last_streak_date = today_str
             message = "All tasks completed! Streak increased."
 
-        # Update database
+        # Update database - saving completed_tasks as a list
         table.update_item(
             Key={'user-id': user_id},
             UpdateExpression="SET completed_tasks = :ct, last_task_date = :ltd, streak = :s, last_streak_date = :lsd",
             ExpressionAttributeValues={
-                ':ct': completed_tasks,
+                ':ct': list(completed_tasks),
                 ':ltd': last_task_date,
                 ':s': new_streak,
                 ':lsd': last_streak_date
@@ -331,7 +332,7 @@ def reset_streak():
         response = table.update_item(
             Key={'user-id': user_id},
             UpdateExpression="SET streak = :val, last_streak_date = :lsd, completed_tasks = :ct",
-            ExpressionAttributeValues={':val': 0, ':lsd': '', ':ct': set()},
+            ExpressionAttributeValues={':val': 0, ':lsd': '', ':ct': []},
             ReturnValues="UPDATED_NEW"
         )
         return jsonify({"message": "Streak reset", "new_streak": response['Attributes']['streak']}), 200
