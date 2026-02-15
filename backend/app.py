@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO, emit
 import boto3
@@ -155,7 +158,9 @@ def verify_user():
 
 @app.route('/login', methods=['POST'])
 def login_user():
+    print("=== LOGIN ROUTE HIT ===")
     data = request.get_json()
+    print(f"Data received: {data}")
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
     
@@ -166,6 +171,7 @@ def login_user():
         return jsonify({"error": "Missing email or password"}), 400
 
     try:
+        print("=== CHECKING DATABASE ===")
         response = cognito_client.initiate_auth(
             ClientId=COGNITO_CLIENT_ID,
             AuthFlow='USER_PASSWORD_AUTH',
@@ -174,6 +180,7 @@ def login_user():
                 'PASSWORD': password
             }
         )
+        print("=== DATABASE CHECK COMPLETE ===")
         
         # FIX 1: Safely handle Cognito "Challenges" (like forcing a password reset)
         if 'ChallengeName' in response:
