@@ -1,7 +1,9 @@
-# MEGAMIND
+# MEGAMIND!
 
 ## About the Project
-[Insert your project description here]
+With the global prevalence of dementia rising, we wanted to create a solution that goes beyond passive care. We were inspired by research into neuroplasticity which is the brain's ability to reorganize itself. We looked to build a tool that actively stimulates the specific regions most affected by cognitive decline.
+
+**MEGAMIND!** is a cognitive therapy platform designed to mitigate the effects of dementia. By utilizing targeted exercises, the application focuses on stimulating key areas of the brain proven to foster cognitive resilience and neuroplasticity, providing users with a proactive way to manage their brain health.
 
 ## Project Structure
 
