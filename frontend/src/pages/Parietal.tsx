@@ -17,6 +17,7 @@ export default function Parietal() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const completedShapesRef = useRef<string[]>([]);
+  const isProcessingRef = useRef<boolean>(false);
 
   // Initialize Socket
   useEffect(() => {
@@ -109,22 +110,27 @@ export default function Parietal() {
     startVideo();
 
     const interval = setInterval(() => {
-      if (!socket || !videoRef.current || !canvasRef.current || isTaskComplete) return;
-      
-      // FIX 1: Ensure the video is actually playing and has data before capturing
-      if (videoRef.current.readyState !== 4) return;
-      
-      if (completedShapesRef.current.length >= 3) return;
+        // 1. Check if we are already waiting on a frame or if task is done
+        if (!socket || !videoRef.current || !canvasRef.current || isTaskComplete || isProcessingRef.current) return;
+        
+        if (videoRef.current.readyState !== 4) return;
+        if (completedShapesRef.current.length >= 3) return;
 
-      const context = canvasRef.current.getContext("2d");
-      if (context) {
-        // Draw video frame to canvas
-        context.drawImage(videoRef.current, 0, 0, 640, 480);
-        // Convert to base64
-        const imageData = canvasRef.current.toDataURL("image/jpeg", 0.6);
-        socket.emit("process_frame", { image: imageData, user_id: "anonymous" });
-      }
-    }, 100); // 100ms = 10 FPS
+        const context = canvasRef.current.getContext("2d");
+        if (context) {
+            context.drawImage(videoRef.current, 0, 0, 640, 480);
+            const imageData = canvasRef.current.toDataURL("image/jpeg", 0.6);
+
+            // 2. Set the lock to true
+            isProcessingRef.current = true;
+
+            // 3. Emit the frame with a callback (acknowledgment)
+            socket.emit("process_frame", { image: imageData, user_id: "anonymous" }, () => {
+            // 4. Release the lock when the server confirms receipt/processing
+            isProcessingRef.current = false;
+            });
+        }
+    }, 100);
 
     return () => {
       clearInterval(interval);

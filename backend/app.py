@@ -19,9 +19,21 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode='gevent',
+    max_http_buffer_size=1000000,
+    ping_timeout=10,
+    ping_interval=5
+)
 
-mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(
+    static_image_mode=False, 
+    max_num_hands=1,
+    min_detection_confidence=0.7, 
+    min_tracking_confidence=0.7
+)
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
@@ -423,8 +435,11 @@ def handle_frame(data):
             'message': f"You drew a {shape_name.upper()}!" if game_completed else "" 
         })
         
+        return {"status": "ok"}
+
     except Exception as e:
         emit('cv_error', {'error': str(e)})
+        return {"error": str(e)}
 
 @socketio.on('reset_game')
 def handle_reset(data):
