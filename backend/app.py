@@ -28,13 +28,13 @@ socketio = SocketIO(
     ping_interval=5
 )
 
+mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False, 
     max_num_hands=1,
     min_detection_confidence=0.7, 
     min_tracking_confidence=0.7
 )
-hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
 COGNITO_CLIENT_ID = os.environ.get('COGNITO_CLIENT_ID')
